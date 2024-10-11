@@ -1,5 +1,5 @@
-
-
+from math import pi
+from math import exp
 
 
 #Seperate by class: for calculating the P(y) we have to separate data by their classes
@@ -52,3 +52,34 @@ for label in summary:
     print(label)
     for row in summary[label]:
         print(row)
+
+
+## Gaussian Probabaility Density Function
+def calculate_probability(x, mean, stdev):
+    exponent = exp(-((x-mean)**2 / (2 * stdev**2 )))
+    return (1 / ((2 * pi)**0.5 * stdev)) * exponent
+# Test Gaussian PDF
+print(calculate_probability(1.0, 1.0, 1.0))
+print(calculate_probability(2.0, 1.0, 1.0))
+print(calculate_probability(0.0, 1.0, 1.0))
+
+
+## Calculate class probabilities
+def calculate_class_probabilities(summaries, input_vector):
+    total_input_vector = sum(summaries[0][2] for summaries in summaries.values())  # total number of instances in the dataset
+    probabilities = dict()
+    for class_value, class_summaries in summaries.items():
+        probabilities[class_value] = \
+        summaries[class_value][0][2]/float(total_input_vector)
+        for i in range(len(class_summaries)):
+            mean, stdev, _ = class_summaries[i]
+            probabilities[class_value] *= calculate_probability(input_vector[i], mean, stdev)
+    return probabilities
+
+# Test class probabilities
+# testing step 5
+summaries = summarize_by_class(dataset)
+#testing point
+test = dataset[0] # first training example
+probabilities = calculate_class_probabilities(summaries, test)
+print(probabilities)

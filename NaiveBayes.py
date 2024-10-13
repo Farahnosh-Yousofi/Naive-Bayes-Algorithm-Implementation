@@ -1,85 +1,85 @@
-from math import pi
-from math import exp
+from math import pi, exp, sqrt
+from collections import defaultdict
 
-
-#Seperate by class: for calculating the P(y) we have to separate data by their classes
-def sperate_by_class(dataset):
-    seperated = dict()
-    for i in range(len(dataset)):
-        datapoint = dataset[i]
+# Step 1: Separate the dataset by class
+def separate_by_class(dataset):
+    separated = defaultdict(list)
+    for datapoint in dataset:
         class_value = datapoint[-1]
-        if class_value not in seperated:
-            seperated[class_value] = []
-        seperated[class_value].append(datapoint)
-    return seperated
+        separated[class_value].append(datapoint)
+    return separated
 
-##Summarize the data set
-## Finding the mean and standard deviation
-
-#Calculate the mean of a list of numbers
+# Step 2: Calculate the mean and standard deviation for a list of numbers
 def mean(numbers):
     return sum(numbers) / float(len(numbers))
 
-
-#Calculate the standard deviation of a list of numbers
 def stdev(numbers):
-    average = mean(numbers)
-    variance  = sum((x-average)**2 for x in numbers)/float(len(numbers)-1)
-    return variance**0.5
+    avg = mean(numbers)
+    variance = sum([(x - avg) ** 2 for x in numbers]) / (len(numbers) - 1)
+    return sqrt(variance)
 
-
-# Summarize a dataset
+# Step 3: Summarize the dataset (mean, stdev, count) for each feature
 def summarize_dataset(dataset):
-    summaries = [(mean(feature), stdev(feature), len(feature)) for feature in zip(*dataset)]
-    del summaries[-1]  # remove the target column
+    summaries = [(mean(attribute), stdev(attribute), len(attribute)) for attribute in zip(*dataset)]
+    del summaries[-1]  # Remove the class label column
     return summaries
 
-dataset = [[3.393533211,2.331273381,0], [3.110073483,1.781539638,0], [1.343808831,3.368360954,0], [3.582294042,4.67917911,0], [2.280362439,2.866990263,0], [7.423436942,4.696522875,1], [5.745051997,3.533989803,1], [9.172168622,2.511101045,1], [7.792783481,3.424088941,1], [7.939820817,0.791637231,1]]
-
-print(summarize_dataset(dataset))
-
-#Summarize data by class
+# Step 4: Summarize the dataset by class
 def summarize_by_class(dataset):
-    separated = sperate_by_class(dataset)
-    summaries = dict()
-    for class_value, rows in separated.items():
-        summaries[class_value] = summarize_dataset(rows)
+    separated = separate_by_class(dataset)
+    summaries = {}
+    for class_value, instances in separated.items():
+        summaries[class_value] = summarize_dataset(instances)
     return summaries
 
-#Let's test our step 3
-summary = summarize_by_class(dataset)
-for label in summary:
-    print(label)
-    for row in summary[label]:
-        print(row)
-
-
-## Gaussian Probabaility Density Function
+# Step 5: Calculate Gaussian probability density function
 def calculate_probability(x, mean, stdev):
-    exponent = exp(-((x-mean)**2 / (2 * stdev**2 )))
-    return (1 / ((2 * pi)**0.5 * stdev)) * exponent
-# Test Gaussian PDF
-print(calculate_probability(1.0, 1.0, 1.0))
-print(calculate_probability(2.0, 1.0, 1.0))
-print(calculate_probability(0.0, 1.0, 1.0))
+    exponent = exp(-((x - mean) ** 2) / (2 * stdev ** 2))
+    return (1 / (sqrt(2 * pi) * stdev)) * exponent
 
-
-## Calculate class probabilities
+# Step 6: Calculate class probabilities
 def calculate_class_probabilities(summaries, input_vector):
-    total_input_vector = sum(summaries[0][2] for summaries in summaries.values())  # total number of instances in the dataset
-    probabilities = dict()
+    total_rows = sum([summaries[class_value][0][2] for class_value in summaries])
+    probabilities = {}
     for class_value, class_summaries in summaries.items():
-        probabilities[class_value] = \
-        summaries[class_value][0][2]/float(total_input_vector)
+        probabilities[class_value] = summaries[class_value][0][2] / float(total_rows)  # Prior probability
         for i in range(len(class_summaries)):
             mean, stdev, _ = class_summaries[i]
             probabilities[class_value] *= calculate_probability(input_vector[i], mean, stdev)
     return probabilities
 
-# Test class probabilities
-# testing step 5
-summaries = summarize_by_class(dataset)
-#testing point
-test = dataset[0] # first training example
-probabilities = calculate_class_probabilities(summaries, test)
-print(probabilities)
+# Step 7: Make a prediction for a new input
+def predict(summaries, input_vector):
+    probabilities = calculate_class_probabilities(summaries, input_vector)
+    best_label, best_prob = None, -1
+    for class_value, probability in probabilities.items():
+        if best_label is None or probability > best_prob:
+            best_prob = probability
+            best_label = class_value
+    return best_label
+
+# Step 8: Test the Naive Bayes algorithm
+def naive_bayes(train, test):
+    summaries = summarize_by_class(train)
+    predictions = []
+    for row in test:
+        output = predict(summaries, row)
+        predictions.append(output)
+    return predictions
+
+# Step 9: Small dataset for testing
+dataset = [
+    [1.1, 2.5, 0], [1.3, 2.3, 0], [1.5, 2.2, 0], [1.7, 2.8, 0],  # Class 0
+    [2.1, 3.0, 1], [2.3, 3.2, 1], [2.5, 3.1, 1], [2.7, 3.6, 1]   # Class 1
+]
+
+# Split dataset into train and test data
+train_data = dataset
+test_data = [[1.4, 2.4], [2.6, 3.3]]  # Test without labels
+
+# Run the Naive Bayes classifier on the test data
+predictions = naive_bayes(train_data, test_data)
+
+# Print predictions
+for i in range(len(test_data)):
+    print(f"Test instance {i + 1}: Predicted class = {predictions[i]}")
